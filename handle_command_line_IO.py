@@ -14,6 +14,7 @@ def get_input_file(function_that_displays_help_message):
     If a file name was passed as the first command line argument, returns that.
     If a help flag [-h | --help | /h | /?] was passed instead, prints a help message and exits.
     Otherwise, returns a handle to stdin, to read a file from there.
+    If extra arguments are passed by the command line, return those in a tuple
     """
     if len(sys.argv) < 2:
         errprint("No input file specified. Reading from stdin")
@@ -22,7 +23,7 @@ def get_input_file(function_that_displays_help_message):
         function_that_displays_help_message()
         exit()
     else:
-        return open(sys.argv[1], "r")
+        return open(sys.argv[1], "r"),sys.argv[2:]
 
 def is_help_flag(flag):
     """
