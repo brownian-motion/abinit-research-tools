@@ -1,0 +1,22 @@
+{
+	"direct":[
+		{
+			"name":"prtden",
+			"value": 1,
+			"comment": "Print the density\nin a separate file"
+		},
+		{
+			"name":"optden",
+			"value":"9",
+			"comment":"Optimize a1 and a2"
+		},
+		{
+			"name":"acell",
+			"value":[1,2,3]
+		},
+		{
+			"name":"rprim",
+			"value":[[1,2],[3,4]]
+		}
+	]
+}
