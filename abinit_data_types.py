@@ -1,5 +1,6 @@
 import json
 from json import JSONEncoder, JSONDecoder
+from fractions import Fraction
 
 class KPointWithEnergy:
     """Simple data type for a k-point with energy eigenvalues for various bands"""
@@ -60,3 +61,72 @@ class CoordinateJSONDecoder(JSONDecoder):
     """Interprets the given dict `object` as a `KPointWithEnergy`"""
     def object_hook(self, object):
         return Coordinate(object.coordinate_array, object.coordinate_system)
+
+
+MIN_LABEL_WIDTH = 8
+class SimpleAttribute:
+
+    def __init__(self, name, value, comment=None):
+        self.name = name
+        self.value = value
+        self.comment = comment
+
+    def __str__(self):
+        """Represent this attribute in Abinit"""
+        if(self.comment is None):
+            formatted_comment_lines = []
+        else:
+            formatted_comment_lines = ["#"+x for x in self.comment.splitlines()]
+
+        if(self.value is None or self.name is None):
+            input_lines=[]
+        else:
+            if(type(self.value) is list and len(self.value) > 0):
+                if(type(self.value[0]) is list): #then the value is a matrix
+                    input_lines = [self.name] + [' '*MIN_LABEL_WIDTH+"  ".join([unicode(xy) for xy in x]) for x in self.value]
+                else: #then the value is a 1-D array
+                    input_lines = [self.name.ljust(MIN_LABEL_WIDTH) + " " + "  ".join([unicode(x) for x in self.value])]
+            else:
+                input_lines = [self.name.ljust(MIN_LABEL_WIDTH) + " "+ unicode(self.value)]
+
+        return "\n".join(formatted_comment_lines+input_lines)
+
+    def __repr__(self):
+        """Represent this attribute as JSON"""
+        return self.__dict__.__repr__()
+
+class SimpleAttributeJSONDecoder(json.JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
+
+    def object_hook(self, element):
+        """
+        Parse the name, value, and optional comment inside an attribute,
+        and return it as a SimpleAttribute.
+
+        Assumes all element properties are unicode u'strings'.
+        """
+        try:
+            if u'_type' in element and element[u'_type'] == u'fraction':
+                if 'numerator' in element and 'denominator' in element:
+                    return Fraction(int(element['numerator']), int(element['denominator']))
+                elif 'value' in element:
+                    return Fraction(element['value'])
+                raise NotImplementedError("Unknown Fraction format: "+element)
+            # handle_command_line_IO.errprint(element)
+            if ('_type' in element and element['_type'] == u'attribute') \
+                or 'comment' in element \
+                or 'name' in element \
+                or 'value' in element: #if it's a Simple Attribute
+
+                if u'comment' in element: 
+                    if u'name' in element and u'value' in element:
+                        return SimpleAttribute(name=(element[u'name'] or element['name']), value=element[u'value'], comment=element[u'comment'])
+                    return SimpleAttribute(name=None, value=None, comment=element[u'comment'])
+                return SimpleAttribute(name=element[u'name'], value=element[u'value'])
+            return element
+        except Exception as cause:
+            if not cause.args: 
+                cause.args=('',)
+            cause.args = cause.args + ("Encountered error with: "+str(element),)
+            raise
