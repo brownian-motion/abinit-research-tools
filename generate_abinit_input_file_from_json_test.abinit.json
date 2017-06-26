@@ -17,6 +17,21 @@
 		{
 			"name":"rprim",
 			"value":[[1,2],[3,4]]
+		},
+		{
+			"name":"xred",
+			"value":[
+				0,
+				{
+					"_type":"fraction",
+					"value":"2/3"
+				},
+				{
+					"_type":"fraction",
+					"numerator":"1",
+					"denominator":"2"
+				}
+			]
 		}
 	]
 }

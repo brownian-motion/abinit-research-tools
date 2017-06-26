@@ -35,10 +35,17 @@ Additional properties are ignored.
 
 Input values may be the following types:
 
-literal (string or number): placed as-is
-array of literals: placed in-line, separated by 2 spaces
-matrix of literals: placed on each line after the label,
+literal (string or number):
+	placed as-is
+array of literals:
+	placed in-line, separated by 2 spaces
+matrix of literals:
+	placed on each line after the label,
     indented with values separated by 2 spaces
+fraction:
+	a JSON object with '_type':'fraction'
+	and either literal 'numerator' and 'denominator' fields
+	or a 'value':'A/B' field
 
 This file ignores all "meta" attributes and naively places all "direct" attributes,
 with comments for each input preceding each input.
@@ -55,8 +62,35 @@ __status__ = "development"
 
 import json
 import handle_command_line_IO
+from fractions import Fraction
 
 LABEL_WIDTH = 8
+
+# class Fraction (fractions.Fraction):
+# 	"""
+# 	A Fraction object like the built-in one that allows for
+# 	printing as a JSON object.
+# 	"""
+# 	def __init__(self, *args):
+# 		"""
+# 		Creates a fractions.Fraction object.
+# 		Accepts either a single string in the form A/B,
+# 		or two values (numerator and denominator) that can be cast as ints.
+# 		"""
+# 		if len(args) == 2:
+# 			fractions.Fraction.__init__(self,int(args[0]), int(args[1]))
+# 		elif len(args) == 1:
+# 			fractions.Fraction.__init__(self,args[0])
+# 		else:
+# 			raise Exception("Invalid input to Fraction: "+args)
+
+# 	# def __str__(self):
+# 	# 	"""Represents this fraction as a string, for Abinit"""
+# 	# 	return unicode(self.numerator) + "/" + unicode(self.denominator)
+
+# 	def __repr__(self):
+# 		"""Represents this fraction as JSON"""
+# 		return dict(_type="fraction", numerator=self.numerator, denominator=self.denominator).__repr__()
 
 class SimpleAttribute:
 	def __init__(self, name, value, comment=None):
@@ -100,20 +134,27 @@ class SimpleAttributeJSONDecoder(json.JSONDecoder):
 		Assumes all element properties are unicode u'strings'.
 		"""
 		try:
+			if u'_type' in element and element[u'_type'] == u'fraction':
+				if 'numerator' in element and 'denominator' in element:
+					return Fraction(int(element['numerator']), int(element['denominator']))
+				elif 'value' in element:
+					return Fraction(element['value'])
+				raise Exception("Unknown Fraction format: "+element)
 			# handle_command_line_IO.errprint(element)
-			if('comment' in element or 'name' in element or 'value' in element): #if it's a Simple Attribute
-				if(u'comment' in element): 
-					if(u'name' in element and u'value' in element):
+			if ('_type' in element and element['_type'] == u'attribute') \
+				or 'comment' in element \
+				or 'name' in element \
+				or 'value' in element: #if it's a Simple Attribute
+
+				if u'comment' in element: 
+					if u'name' in element and u'value' in element:
 						return SimpleAttribute(name=(element[u'name'] or element['name']), value=element[u'value'], comment=element[u'comment'])
-					else:
-						return SimpleAttribute(name=None, value=None, comment=element[u'comment'])
-				else:
-					return SimpleAttribute(name=element[u'name'], value=element[u'value'])
-			else: #some other element
-				return element
-		except:
+					return SimpleAttribute(name=None, value=None, comment=element[u'comment'])
+				return SimpleAttribute(name=element[u'name'], value=element[u'value'])
+			return element
+		except(Exception):
 			handle_command_line_IO.errprint(element)
-			return None
+			raise
 
 def display_help_message():
 	"""Prints a help message with usage instructions to stderr"""
