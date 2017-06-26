@@ -32,6 +32,8 @@ class SimpleObjectJSONEncoder(JSONEncoder):
     """Encodes objects into JSON using their __dict__ form"""
     def default(self, o):
         """Encodes the object o using o.__dict___"""
+        if isinstance(o,Fraction):
+            return {"_type":"fraction", "numerator":o.numerator, "denominator":o.denominator}
         return o.__dict__
 
 class KPointWithEnergyJSONDecoder(JSONDecoder):
@@ -65,7 +67,37 @@ class CoordinateJSONDecoder(JSONDecoder):
 
 MIN_LABEL_WIDTH = 8
 class SimpleAttribute:
+    """
+    Represents a single direct input value for Abinit.
 
+    Each attribute has the following format:
+
+    {
+        "name": <string>,
+        "value": <input value>,
+        "comment": <string, optional>
+    }
+    or
+    {
+        "comment": <string>
+    }
+
+    Additional properties are ignored.
+
+    Input values may be the following types:
+
+    literal (string or number):
+        placed as-is
+    array of literals:
+        placed in-line, separated by 2 spaces
+    matrix of literals:
+        placed on each line after the label,
+        indented with values separated by 2 spaces
+    fraction:
+        a JSON object with '_type':'fraction'
+        and either literal 'numerator' and 'denominator' fields
+        or a 'value':'A/B' field
+    """
     def __init__(self, name, value, comment=None):
         self.name = name
         self.value = value
@@ -108,11 +140,7 @@ class SimpleAttributeJSONDecoder(json.JSONDecoder):
         """
         try:
             if u'_type' in element and element[u'_type'] == u'fraction':
-                if 'numerator' in element and 'denominator' in element:
-                    return Fraction(int(element['numerator']), int(element['denominator']))
-                elif 'value' in element:
-                    return Fraction(element['value'])
-                raise NotImplementedError("Unknown Fraction format: "+element)
+                return parse_fraction_from_dict(element)
             # handle_command_line_IO.errprint(element)
             if ('_type' in element and element['_type'] == u'attribute') \
                 or 'comment' in element \
@@ -130,3 +158,44 @@ class SimpleAttributeJSONDecoder(json.JSONDecoder):
                 cause.args=('',)
             cause.args = cause.args + ("Encountered error with: "+str(element),)
             raise
+
+def parse_fraction_from_dict(fraction_dict):
+    """
+    Accepts a dict object and returns a Fraction that represents the same data.
+    The following formats are supported:
+
+    numerator, denominator (as anything castable to an int)
+    value="A/B"
+    """
+    if 'numerator' in fraction_dict and 'denominator' in fraction_dict:
+        return Fraction(int(fraction_dict['numerator']), int(fraction_dict['denominator']))
+    elif 'value' in fraction_dict:
+        return Fraction(fraction_dict['value'])
+    raise NotImplementedError("Unknown Fraction format: "+fraction_dict)
+
+
+class Atom:
+    """A simple attribute representing an Atom with a position"""
+    def __init__(self, znucl, coord):
+        self.znucl = znucl
+        self.coord = coord #assumed to be a Coordinate object in the "reduced" system with fractional values
+
+def get_atoms_from_experiment_meta_data(experiment):
+    """Gets a list of AtomAttributes from the "meta" tag of an experiment"""
+    if 'meta' in experiment and 'atoms' in experiment['meta']:
+        return [parse_atom_attribute_from_dict(attr) for attr in experiment['meta']['atoms']]
+    else:
+        raise RuntimeError("Tried to parse the experiment's metadata for an atoms attribute, but could not find it.")
+
+def parse_atom_attribute_from_dict(atom_attribute_dict):
+    """Takes a dict parsed from a JSON dict and returns an AtomAttribute representing the same data."""
+    fractional_coordinate_data = []
+    for coordinate_index in atom_attribute_dict['coord']:
+        if isinstance(coordinate_index, dict):
+            fractional_coordinate_data.append(parse_fraction_from_dict(coordinate_index))
+        else:
+            fractional_coordinate_data.append(Fraction(coordinate_index))
+    return Atom( \
+        int(atom_attribute_dict['znucl']), \
+        Coordinate(coordinate_array=fractional_coordinate_data,coordinate_system="reduced") \
+        )

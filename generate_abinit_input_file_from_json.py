@@ -13,25 +13,27 @@ The format supported is as follows:
 		<attributes>
 	],
 
-	"meta": // an array of attributes describing the input, that may be used to create input but are not input directly
-	[
-		<attributes>
-	]
+	"meta": // a dictionary of values describing the input, that may be used to create input but are not input directly
+	{
+		<meta-atribute name>:<pretty much anything>
+	}
 }
 
-Each attribute has the following format:
+Each attribute has some combination of the following fields:
 
 {
 	"name": <string>,
 	"value": <input value>,
-	"comment": <string, optional>
-}
-or
-{
 	"comment": <string>
 }
 
+For "direct" data, all attributes must have either a name/value and an optional comment,
+or just a comment.
 Additional properties are ignored.
+
+For "meta" data, values may be anything.
+This is to allow high customization of experiments.
+This program does not parse meta data.
 
 Input values may be the following types:
 
@@ -63,8 +65,6 @@ __status__ = "development"
 import json
 import handle_command_line_IO
 import abinit_data_types
-
-LABEL_WIDTH = 8
 
 def display_help_message():
 	"""Prints a help message with usage instructions to stderr"""

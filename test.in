@@ -1,0 +1,32 @@
+#Print the density
+#in a separate file
+prtden   1
+
+#Optimize a1 and a2
+optden   9
+
+acell    1  2  3
+
+rprim
+        1  2
+        3  4
+
+xred     0  2/3  1/2
+
+#This field was automatically generated
+natom    3
+
+#This field was automatically generated
+ntypat   2
+
+#This field was automatically generated
+typat    1  1  2
+
+#This field was automatically generated
+znucl    1  6
+
+#This field was automatically generated
+xred
+        1  2  3
+        2/3  1/3  0
+        1/2  1/2  0

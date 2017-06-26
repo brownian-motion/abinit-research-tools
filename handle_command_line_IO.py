@@ -18,12 +18,12 @@ def get_input_file(function_that_displays_help_message):
     """
     if len(sys.argv) < 2:
         errprint("No input file specified. Reading from stdin")
-        return sys.stdin
+        return sys.stdin, [] #no excess arguments
     elif is_help_flag(sys.argv[1]):
         function_that_displays_help_message()
         exit()
     else:
-        return open(sys.argv[1], "r"),sys.argv[2:]
+        return open(sys.argv[1], "r"), sys.argv[2:]
 
 def is_help_flag(flag):
     """
