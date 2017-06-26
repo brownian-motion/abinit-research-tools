@@ -26,6 +26,10 @@ Each attribute has the following format:
 	"value": <input value>,
 	"comment": <string, optional>
 }
+or
+{
+	"comment": <string>
+}
 
 Additional properties are ignored.
 
@@ -67,13 +71,16 @@ class SimpleAttribute:
 		else:
 			formatted_comment_lines = ["#"+x for x in self.comment.splitlines()]
 
-		if(type(self.value) is list and len(self.value) > 0):
-			if(type(self.value[0]) is list): #then the value is a matrix
-				input_lines = [self.name] + [' '*LABEL_WIDTH+"  ".join([unicode(xy) for xy in x]) for x in self.value]
-			else: #then the value is a 1-D array
-				input_lines = [self.name.ljust(LABEL_WIDTH) + "  ".join([unicode(x) for x in self.value])]
+		if(self.value is None or self.name is None):
+			input_lines=[]
 		else:
-			input_lines = [self.name.ljust(LABEL_WIDTH) + unicode(self.value)]
+			if(type(self.value) is list and len(self.value) > 0):
+				if(type(self.value[0]) is list): #then the value is a matrix
+					input_lines = [self.name] + [' '*LABEL_WIDTH+"  ".join([unicode(xy) for xy in x]) for x in self.value]
+				else: #then the value is a 1-D array
+					input_lines = [self.name.ljust(LABEL_WIDTH) + " " + "  ".join([unicode(x) for x in self.value])]
+			else:
+				input_lines = [self.name.ljust(LABEL_WIDTH) + " "+ unicode(self.value)]
 
 		return "\n".join(formatted_comment_lines+input_lines)
 
@@ -92,14 +99,21 @@ class SimpleAttributeJSONDecoder(json.JSONDecoder):
 
 		Assumes all element properties are unicode u'strings'.
 		"""
-		handle_command_line_IO.errprint(element)
-		if('comment' in element or 'name' in element or 'value' in element): #if it's a Simple Attribute
-			if(u'comment' in element): 
-				return SimpleAttribute(name=(element[u'name'] or element['name']), value=element[u'value'], comment=element[u'comment'])
-			else:
-				return SimpleAttribute(name=element[u'name'], value=element[u'value'])
-		else: #some other element
-			return element
+		try:
+			# handle_command_line_IO.errprint(element)
+			if('comment' in element or 'name' in element or 'value' in element): #if it's a Simple Attribute
+				if(u'comment' in element): 
+					if(u'name' in element and u'value' in element):
+						return SimpleAttribute(name=(element[u'name'] or element['name']), value=element[u'value'], comment=element[u'comment'])
+					else:
+						return SimpleAttribute(name=None, value=None, comment=element[u'comment'])
+				else:
+					return SimpleAttribute(name=element[u'name'], value=element[u'value'])
+			else: #some other element
+				return element
+		except:
+			handle_command_line_IO.errprint(element)
+			return None
 
 def display_help_message():
 	"""Prints a help message with usage instructions to stderr"""
@@ -107,4 +121,4 @@ def display_help_message():
 
 input_file,_ = handle_command_line_IO.get_input_file(display_help_message) # get from stdin or first argument's file
 input_data = json.load(input_file, cls=SimpleAttributeJSONDecoder)
-print("\n\n".join([attribute.__str__() for attribute in input_data[u'direct']])) # send to stdout for redirection
+print("\n\n".join([attribute.__str__() for attribute in input_data[u'direct']]).encode("UTF-8")) # send to stdout for redirection
