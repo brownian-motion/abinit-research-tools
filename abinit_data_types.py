@@ -21,28 +21,71 @@ class Coordinate:
     Every Coordinate is an array of numbers representing the coordinate position,
     and a string describing the coordinate system.
 
-    Implements scalar multiplication and division.
+    Implements scalar addition, subtraction, multiplication, and division.
     """
     def __init__(self, coordinate_array, coordinate_system="unknown"):
         self.coordinate_array = coordinate_array
         self.coordinate_system = coordinate_system
 
     def __repr__(self):
+        """Represents this Coordinate as a JSON object"""
         return json.dumps(self.__dict__, cls=SimpleObjectJSONEncoder)
+
+    def __add__(self, other):
+        """
+        If other is scalar, returns a new Coordinate with each coordinate increased by value other.
+        If other is a list, returns a new Coordinate with each coordinate increased
+            by the value of other at that index.
+            If there lists are not the same length, raises a RuntimeException
+        """
+        if isinstance(other, Coordinate):
+            return self+other.coordinate_array
+        elif isinstance(other, list):
+            return Coordinate([self.coordinate_array[i]+other[i] for i in xrange(len(self.coordinate_array))])
+        else:
+            return Coordinate([x+other for x in self.coordinate_array], self.coordinate_system)
+
+    def __sub__(self, other):
+        """
+        If other is scalar, returns a new Coordinate with each coordinate decreased by value other.
+        If other is a list, returns a new Coordinate with each coordinate decreased
+            by the value of other at that index.
+            If there lists are not the same length, raises a RuntimeException
+        """
+        if isinstance(other, Coordinate):
+            return self-other.coordinate_array
+        elif isinstance(other, list):
+            return Coordinate([self.coordinate_array[i]-other[i] for i in xrange(len(self.coordinate_array))])
+        else:
+            return Coordinate([x-other for x in self.coordinate_array], self.coordinate_system)
 
     def __mul__(self, other):
         """
-        Returns a new Coordinate with each coordinate multiplied by other.
-        Other is assumed to be scalar.
+        If other is scalar, returns a new Coordinate with each coordinate multiplied by value other.
+        If other is a list, returns a new Coordinate with each coordinate multiplied
+            by the value of other at that index.
+            If there lists are not the same length, raises a RuntimeException
         """
-        return Coordinate([x*other for x in self.coordinate_array],self.coordinate_system)
+        if isinstance(other, Coordinate):
+            return self*other.coordinate_array
+        elif isinstance(other, list):
+            return Coordinate([self.coordinate_array[i]*other[i] for i in xrange(len(self.coordinate_array))])
+        else:
+            return Coordinate([x*other for x in self.coordinate_array], self.coordinate_system)
 
     def __div__(self, other):
         """
-        Returns a new Coordinate with each coordinate divided by other.
-        Other is assumed to be scalar.
+        If other is scalar, returns a new Coordinate with each coordinate divided by value other.
+        If other is a list, returns a new Coordinate with each coordinate divided
+            by the value of other at that index.
+            If there lists are not the same length, raises a RuntimeException
         """
-        return Coordinate([x/other for x in self.coordinate_array],self.coordinate_system)
+        if isinstance(other, Coordinate):
+            return self/other.coordinate_array
+        elif isinstance(other, list):
+            return Coordinate([self.coordinate_array[i]/other[i] for i in xrange(len(self.coordinate_array))])
+        else:
+            return Coordinate([x/other for x in self.coordinate_array], self.coordinate_system)
 
 class SimpleObjectJSONEncoder(JSONEncoder):
     """Encodes objects into JSON using their __dict__ form"""
@@ -196,6 +239,10 @@ class Atom:
         self.znucl = znucl
         self.coord = coord #assumed to be a Coordinate object in the "reduced" system with fractional values
 
+    # def __repr__(self):
+    #     """Return a string representing this atom in JSON"""
+    #     return {"znucl":self.znucl, "coord":self.coord.coordinate_array}.__repr__()
+
 def parse_atoms(atoms_json_array):
     """Gets a list of AtomAttributes from the JSON of an experiment describing atomic positions"""
     if atoms_json_array is None:
@@ -204,17 +251,22 @@ def parse_atoms(atoms_json_array):
         return [parse_atom_attribute_from_dict(attr) for attr in atoms_json_array]
 
 def parse_atom_attribute_from_dict(atom_attribute_dict):
-    """Takes a dict parsed from a JSON dict and returns an AtomAttribute representing the same data."""
-    fractional_coordinate_data = []
-    for coordinate_index in atom_attribute_dict['coord']:
-        if isinstance(coordinate_index, dict):
-            fractional_coordinate_data.append(parse_fraction_from_dict(coordinate_index))
-        else:
-            fractional_coordinate_data.append(Fraction(coordinate_index))
+    """Takes a dict parsed from a JSON dict and returns an Atom representing the same data."""
+    if isinstance(atom_attribute_dict['coord'], dict):
+        fractional_coordinate = Coordinate(\
+            coordinate_array=atom_attribute_dict['coord']['coordinate_array'], \
+            coordinate_system=atom_attribute_dict['coord']['coordinate_system'] )
+    else:
+        fractional_coordinate_data = []
+        for coordinate_index in atom_attribute_dict['coord']:
+            if isinstance(coordinate_index, dict):
+                fractional_coordinate_data.append(parse_fraction_from_dict(coordinate_index))
+            else:
+                fractional_coordinate_data.append(Fraction(coordinate_index))
+        fractional_coordinate = \
+            Coordinate(coordinate_array=fractional_coordinate_data, coordinate_system="reduced")
     return Atom( \
-        int(atom_attribute_dict['znucl']), \
-        Coordinate(coordinate_array=fractional_coordinate_data,coordinate_system="reduced") \
-        )
+        int(atom_attribute_dict['znucl']), fractional_coordinate)
 
 class Experiment:
     """
@@ -247,7 +299,8 @@ class Experiment:
     def load_from_json_file(fp, cls=SimpleAttributeJSONDecoder):
         """
         Returns an Experiment loaded from JSON in the given file pointer
-        By default, uses SimpleAttributeJSONDecoder as the cls for loading JSON
+        By default, uses SimpleAttributeJSONDecoder as the cls for loading JSON,
+        which means that everything in "meta" will just be a simple dict
         """
         input_data = json.load(fp, cls=cls)
         return Experiment(direct=input_data['direct'], meta=input_data['meta'])

@@ -38,7 +38,7 @@
 		"atoms":[
 			{
 				"znucl":1,
-				"coord":[1, 2, 3]
+				"coord":[1, 0, 0]
 			},
 			{
 				"znucl":1,
@@ -48,6 +48,7 @@
 				"znucl":6,
 				"coord":["1/2", {"_type":"fraction","value":"1/2"}, 0]
 			}
-		]
+		],
+		"repeat_cell": [1, 2, 3]
 	}
 }
