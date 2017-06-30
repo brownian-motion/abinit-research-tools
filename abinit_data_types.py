@@ -20,6 +20,8 @@ class Coordinate:
     Simple data type for a coordinate.
     Every Coordinate is an array of numbers representing the coordinate position,
     and a string describing the coordinate system.
+
+    Implements scalar multiplication and division.
     """
     def __init__(self, coordinate_array, coordinate_system="unknown"):
         self.coordinate_array = coordinate_array
@@ -27,6 +29,20 @@ class Coordinate:
 
     def __repr__(self):
         return json.dumps(self.__dict__, cls=SimpleObjectJSONEncoder)
+
+    def __mul__(self, other):
+        """
+        Returns a new Coordinate with each coordinate multiplied by other.
+        Other is assumed to be scalar.
+        """
+        return Coordinate([x*other for x in self.coordinate_array],self.coordinate_system)
+
+    def __div__(self, other):
+        """
+        Returns a new Coordinate with each coordinate divided by other.
+        Other is assumed to be scalar.
+        """
+        return Coordinate([x/other for x in self.coordinate_array],self.coordinate_system)
 
 class SimpleObjectJSONEncoder(JSONEncoder):
     """Encodes objects into JSON using their __dict__ form"""
@@ -180,12 +196,12 @@ class Atom:
         self.znucl = znucl
         self.coord = coord #assumed to be a Coordinate object in the "reduced" system with fractional values
 
-def get_atoms_from_experiment_meta_data(experiment):
-    """Gets a list of AtomAttributes from the "meta" tag of an experiment"""
-    if 'meta' in experiment and 'atoms' in experiment['meta']:
-        return [parse_atom_attribute_from_dict(attr) for attr in experiment['meta']['atoms']]
-    else:
+def parse_atoms(atoms_json_array):
+    """Gets a list of AtomAttributes from the JSON of an experiment describing atomic positions"""
+    if atoms_json_array is None:
         raise RuntimeError("Tried to parse the experiment's metadata for an atoms attribute, but could not find it.")
+    else:
+        return [parse_atom_attribute_from_dict(attr) for attr in atoms_json_array]
 
 def parse_atom_attribute_from_dict(atom_attribute_dict):
     """Takes a dict parsed from a JSON dict and returns an AtomAttribute representing the same data."""
@@ -199,3 +215,39 @@ def parse_atom_attribute_from_dict(atom_attribute_dict):
         int(atom_attribute_dict['znucl']), \
         Coordinate(coordinate_array=fractional_coordinate_data,coordinate_system="reduced") \
         )
+
+class Experiment:
+    """
+    A class representing a single Abinit experiment.
+
+    Every experiment has an array of SimpleAttributes "direct" and a dictionary of named meta-values "meta".
+    """
+    def __init__(self, direct=None, meta=None):
+        self.direct = direct
+        self.meta = meta
+
+    def __repr__(self, indent=None):
+        """
+        Represents this Experiment in JSON format
+        Can specify indentation via indent parameter
+        """
+        return json.dumps(self.__dict__, cls=SimpleObjectJSONEncoder, indent=indent)
+
+    def compile(self):
+        """
+        Represents this Experiment as an ABINIT input file.
+        Each direct attribute is represented on separate lines,
+        with associated comments preceding labels.
+        Meta values are ignored.
+        Returns a native python string; it's recommended to .encode("UTF-8") the result.
+        """
+        return "\n\n".join([attribute.__str__() for attribute in self.direct])
+
+    @staticmethod
+    def load_from_json_file(fp, cls=SimpleAttributeJSONDecoder):
+        """
+        Returns an Experiment loaded from JSON in the given file pointer
+        By default, uses SimpleAttributeJSONDecoder as the cls for loading JSON
+        """
+        input_data = json.load(fp, cls=cls)
+        return Experiment(direct=input_data['direct'], meta=input_data['meta'])

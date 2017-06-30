@@ -11,14 +11,13 @@ __license__ = "MIT"
 __maintainer__ = "JJ Brown"
 __status__ = "development"
 
-from abinit_data_types import KPointWithEnergy, KPointWithEnergyJSONDecoder
 import handle_command_line_IO
 import matplotlib
 matplotlib.use('Agg') # Turn off display of graphs to the user; comment out this line to dispaly graphs before saving
 import matplotlib.pyplot as plt # This library is very similar to MATLAB
 import json
-import numpy
 import sys
+from abinit_data_types import KPointWithEnergy, KPointWithEnergyJSONDecoder
 
 def display_help():
     handle_command_line_IO.errprint("Usage: python graph_band_eigenvalues.py [abinit_eigenvalue_data.json [point_label_index point_label ...]]> abinit_eigenvalue_data.svg")
@@ -34,17 +33,26 @@ def create_eigenenergy_plot_figure(band_energies, energy_unit="Unknown unit", ti
     axes.set_title(title)
     return figure
 
+def main():
+    """
+    Plots band eigenvalue data for an ABINIT simulation.
+    Accepts a JSON file describing the band eigenergies via stdin or the first argument,
+    and outputs SVG graphics to stdout.
+    """
+    input_file, extra_command_line_arguments = \
+        handle_command_line_IO.get_input_file_and_args(display_help)
 
-input_file,extra_command_line_arguments = handle_command_line_IO.get_input_file(display_help)
+    with input_file:
+        raw_eigenvalue_data_by_k_point = sorted( \
+            json.load(input_file, cls=KPointWithEnergyJSONDecoder), \
+            key=lambda k: k.number \
+            )
 
-raw_eigenvalue_data_by_k_point = sorted( \
-    json.load(input_file, cls=KPointWithEnergyJSONDecoder), \
-    key=lambda k: k.number \
-    )
+    eigenenergy_data_by_point = [ k_point.band_energies for k_point in raw_eigenvalue_data_by_k_point ]
+    point_labels = dict(zip(extra_command_line_arguments[::2],extra_command_line_arguments[1::2]))
+    plot = create_eigenenergy_plot_figure(eigenenergy_data_by_point,energy_unit=raw_eigenvalue_data_by_k_point[0].energy_unit,special_point_labels=point_labels)
+    plt.show(plot) # outputs to stdout
+    plt.savefig(sys.stdout, format="svg")
 
-eigenenergy_data_by_point = [ k_point.band_energies for k_point in raw_eigenvalue_data_by_k_point ]
-eigenenergy_data_by_band = numpy.matrix.transpose(numpy.array(eigenenergy_data_by_point))
-point_labels = dict(zip(extra_command_line_arguments[::2],extra_command_line_arguments[1::2]))
-plot = create_eigenenergy_plot_figure(eigenenergy_data_by_point,energy_unit=raw_eigenvalue_data_by_k_point[0].energy_unit,special_point_labels=point_labels)
-plt.show(plot)
-plt.savefig(sys.stdout, format="svg")
+if __name__ == '__main__':
+    main()

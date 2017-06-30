@@ -13,7 +13,6 @@ __status__ = "development"
 
 import string
 import json
-from json import JSONEncoder
 from abinit_data_types import Coordinate, KPointWithEnergy, SimpleObjectJSONEncoder
 import handle_command_line_IO
 
@@ -82,4 +81,14 @@ def err_print_help_message():
     """Prints a short help message describing how to use this program"""
     handle_command_line_IO.errprint("Usage: parse_band_eigenvalues.py <filename>")
 
-print(json.dumps(parse_band_eigenenergy_file(handle_command_line_IO.get_input_file(err_print_help_message)), cls=SimpleObjectJSONEncoder))
+def main():
+    """
+    Accepts input on stdin or from the file specified in the first argument,
+    reads band eigenenergy data output from ABINIT,
+    and outputs a JSON file representing the data in JSON.
+    """
+    with handle_command_line_IO.get_input_file(err_print_help_message) as input_file:
+        print json.dumps(parse_band_eigenenergy_file(input_file), cls=SimpleObjectJSONEncoder)
+
+if __name__ == '__main__':
+    main()
