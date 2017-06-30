@@ -117,7 +117,7 @@ def main():
             # Scale the unit cell
             for attribute in experiment.direct:
                 if attribute.name == "acell":
-                    attribute.value = [attribute.value[i] * repeat_factor[i] for i in xrange(0, 3)]
+                    attribute.value = [float(attribute.value[i]) * repeat_factor[i] for i in xrange(0, 3)]
 
             # Take out repetition of cell so it doesn't happen again somehow
             experiment.meta['repeat_cell'] = None
