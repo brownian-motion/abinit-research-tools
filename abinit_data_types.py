@@ -303,4 +303,4 @@ class Experiment:
         which means that everything in "meta" will just be a simple dict
         """
         input_data = json.load(fp, cls=cls)
-        return Experiment(direct=input_data['direct'], meta=input_data['meta'])
+        return Experiment(direct=input_data.get('direct', []), meta=input_data.get('meta', {}))

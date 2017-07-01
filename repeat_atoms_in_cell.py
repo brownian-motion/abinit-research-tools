@@ -120,7 +120,7 @@ def main():
                     attribute.value = [float(attribute.value[i]) * repeat_factor[i] for i in xrange(0, 3)]
 
             # Take out repetition of cell so it doesn't happen again somehow
-            experiment.meta['repeat_cell'] = None
+            experiment.meta.pop('repeat_cell', None)
         else:
             handle_command_line_IO.errprint("No repeat of unit cell specified; taking no action")
 
