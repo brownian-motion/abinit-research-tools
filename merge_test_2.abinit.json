@@ -1,0 +1,17 @@
+{
+	"direct":[
+		{
+			"name":"prtden",
+			"value": 1,
+			"comment": "Print the density\nin a separate file"
+		},
+		{
+			"name":"optden",
+			"value":"9",
+			"comment":"Optimize a1 and a2"
+		}
+	],
+	"meta":{
+		"repeat_cell": [1, 2, 3]
+	}
+}
