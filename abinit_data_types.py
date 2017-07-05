@@ -255,14 +255,26 @@ def parse_atom_attribute_from_dict(atom_attribute_dict):
     if isinstance(atom_attribute_dict['coord'], dict):
         fractional_coordinate = Coordinate(\
             coordinate_array=atom_attribute_dict['coord']['coordinate_array'], \
-            coordinate_system=atom_attribute_dict['coord']['coordinate_system'] )
+            coordinate_system=atom_attribute_dict['coord']['coordinate_system'])
     else:
         fractional_coordinate_data = []
         for coordinate_index in atom_attribute_dict['coord']:
             if isinstance(coordinate_index, dict):
-                fractional_coordinate_data.append(parse_fraction_from_dict(coordinate_index))
+                coordinate_index_value = parse_fraction_from_dict(coordinate_index)
+            elif isinstance(coordinate_index, (str, unicode)):
+                if '/' in coordinate_index:
+                    coordinate_index_value = Fraction(coordinate_index)
+                elif '.' in coordinate_index_value:
+                    coordinate_index_value = float(coordinate_index_value)
+                else:
+                    # interpret all ints as fractions so that we can do division if need be
+                    coordinate_index_value = Fraction(coordinate_index_value)
+            elif isinstance(coordinate_index, (int, float, Fraction)):
+                coordinate_index_value = coordinate_index
             else:
-                fractional_coordinate_data.append(Fraction(coordinate_index))
+                raise RuntimeError('Unencountered data type '+type(coordinate_index)+\
+                    'encountered while parsing atom coordinates: '+atom_attribute_dict['coord'])
+            fractional_coordinate_data.append(coordinate_index_value)
         fractional_coordinate = \
             Coordinate(coordinate_array=fractional_coordinate_data, coordinate_system="reduced")
     return Atom( \
