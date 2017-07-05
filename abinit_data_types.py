@@ -49,9 +49,15 @@ class Coordinate:
             If there lists are not the same length, raises a RuntimeException
         """
         if isinstance(other, Coordinate):
+            if self.coordinate_system != other.coordinate_system:
+                raise RuntimeError('incompatible coordinate systems: '\
+                    +self.coordinate_system+' and '+other.coordinate_system)
             return self+other.coordinate_array
         elif isinstance(other, list):
-            return Coordinate([self.coordinate_array[i]+other[i] for i in xrange(len(self.coordinate_array))])
+            return Coordinate(\
+                coordinate_array=\
+                    [self.coordinate_array[i]+other[i] for i in xrange(len(self.coordinate_array))],
+                coordinate_system=self.coordinate_system)
         else:
             return Coordinate([x+other for x in self.coordinate_array], self.coordinate_system)
 
@@ -63,9 +69,15 @@ class Coordinate:
             If there lists are not the same length, raises a RuntimeException
         """
         if isinstance(other, Coordinate):
+            if self.coordinate_system != other.coordinate_system:
+                raise RuntimeError('incompatible coordinate systems: '\
+                    +self.coordinate_system+' and '+other.coordinate_system)
             return self-other.coordinate_array
         elif isinstance(other, list):
-            return Coordinate([self.coordinate_array[i]-other[i] for i in xrange(len(self.coordinate_array))])
+            return Coordinate(\
+                coordinate_array=\
+                    [self.coordinate_array[i]-other[i] for i in xrange(len(self.coordinate_array))],
+                coordinate_system=self.coordinate_system)
         else:
             return Coordinate([x-other for x in self.coordinate_array], self.coordinate_system)
 
@@ -77,9 +89,15 @@ class Coordinate:
             If there lists are not the same length, raises a RuntimeException
         """
         if isinstance(other, Coordinate):
+            if self.coordinate_system != other.coordinate_system:
+                raise RuntimeError('incompatible coordinate systems: '\
+                    +self.coordinate_system+' and '+other.coordinate_system)
             return self*other.coordinate_array
         elif isinstance(other, list):
-            return Coordinate([self.coordinate_array[i]*other[i] for i in xrange(len(self.coordinate_array))])
+            return Coordinate(\
+                coordinate_array=\
+                    [self.coordinate_array[i]*other[i] for i in xrange(len(self.coordinate_array))],
+                coordinate_system=self.coordinate_system)
         else:
             return Coordinate([x*other for x in self.coordinate_array], self.coordinate_system)
 
@@ -91,9 +109,15 @@ class Coordinate:
             If there lists are not the same length, raises a RuntimeException
         """
         if isinstance(other, Coordinate):
+            if self.coordinate_system != other.coordinate_system:
+                raise RuntimeError('incompatible coordinate systems: '\
+                    +self.coordinate_system+' and '+other.coordinate_system)
             return self/other.coordinate_array
         elif isinstance(other, list):
-            return Coordinate([self.coordinate_array[i]/other[i] for i in xrange(len(self.coordinate_array))])
+            return Coordinate(\
+                coordinate_array=\
+                    [self.coordinate_array[i]/other[i] for i in xrange(len(self.coordinate_array))],
+                coordinate_system=self.coordinate_system)
         else:
             return Coordinate([x/other for x in self.coordinate_array], self.coordinate_system)
 
@@ -279,11 +303,13 @@ class Atom:
     """A simple attribute representing an Atom with a position"""
     def __init__(self, znucl, coord):
         self.znucl = znucl
+        # if not (isinstance(coord, Coordinate) and coord.coordinate_system == "reduced"):
+        #     raise RuntimeError("Coordinate "+coord+" must be a Coordinate in the reduced system")
         self.coord = coord #assumed to be a Coordinate object in the "reduced" system with fractional values
 
-    # def __repr__(self):
-    #     """Return a string representing this atom in JSON"""
-    #     return {"znucl":self.znucl, "coord":self.coord.coordinate_array}.__repr__()
+    def __repr__(self):
+        """Return a string representing this atom in JSON"""
+        return {"znucl":self.znucl, "coord":self.coord.coordinate_array}.__repr__()
 
 def parse_atoms(atoms_json_array):
     """Gets a list of AtomAttributes from the JSON of an experiment describing atomic positions"""

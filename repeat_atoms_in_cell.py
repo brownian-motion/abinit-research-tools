@@ -75,7 +75,10 @@ def repeat_atoms_in_unit_cell(atoms_list, repeat_factor_3d):
 
     #scale down the unit cell
     atoms_list = [Atom(atom.znucl, atom.coord / repeat_factor_3d) for atom in atoms_list]
-    original_cell_size = Coordinate(coordinate_array=[Fraction(1,x) for x in repeat_factor_3d])
+    original_cell_size = \
+        Coordinate(\
+            coordinate_array=[Fraction(1, x) for x in repeat_factor_3d],\
+            coordinate_system="reduced")
 
     #copy in each direction, preserving atom order
     for cardinal_direction_index in xrange(0, 3):
@@ -85,7 +88,8 @@ def repeat_atoms_in_unit_cell(atoms_list, repeat_factor_3d):
         for repitition_number in xrange(1, repeat_factor_3d[cardinal_direction_index]):
             scale_factor_vector[cardinal_direction_index] = repitition_number
             for atom in islice(atoms_list, num_original_atoms):
-                atoms_list.append(Atom(atom.znucl, atom.coord + original_cell_size * scale_factor_vector))
+                atoms_list.append(\
+                    Atom(atom.znucl, atom.coord + original_cell_size * scale_factor_vector))
     return atoms_list
 
 def main():
