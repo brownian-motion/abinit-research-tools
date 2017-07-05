@@ -1,0 +1,24 @@
+{
+	"direct":[
+		{
+			"name":"acell",
+			"value":[1,2,3]
+		},
+		{
+			"comment":"tests generating chiral cell with 3 atoms, using float, fraction, and int coordinates"
+		}
+	],
+	"meta":{
+		"atoms":[
+			{
+				"znucl":1,
+				"coord":[0, 0, {"_type":"fraction","value":"1/2"}]
+			},
+			{
+				"znucl":2,
+				"coord":[0.5, 0, 0]
+			}
+		],
+		"make_chirality":[2,0]
+	}
+}

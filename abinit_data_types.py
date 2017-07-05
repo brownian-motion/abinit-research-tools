@@ -121,6 +121,19 @@ class Coordinate:
         else:
             return Coordinate([x/other for x in self.coordinate_array], self.coordinate_system)
 
+    def __hash__(self):
+        """
+        Performs a unique has on this object determined
+        from the coordinate system and the coordinate values
+        """
+        return hash((self.coordinate_system, tuple(self.coordinate_array)))
+
+    def norm(self):
+        """
+        Returns the length of this vector
+        """
+        return sum([val * val for val in self.coordinate_array])**0.5
+
     @staticmethod
     def parse_coordinate_value_array(raw_coordinate_array):
         """
@@ -310,6 +323,16 @@ class Atom:
     def __repr__(self):
         """Return a string representing this atom in JSON"""
         return {"znucl":self.znucl, "coord":self.coord.coordinate_array}.__repr__()
+
+    def __eq__(self, other):
+        """Returns true if other is an Atom with the equal znucl and coord"""
+        return isinstance(other, Atom)\
+            and self.znucl == other.znucl\
+            and self.coord == other.coord
+
+    def __hash__(self):
+        """Returns a unique hash on this object based on the znucl and coord"""
+        return hash((self.znucl, self.coord))
 
 def parse_atoms(atoms_json_array):
     """Gets a list of AtomAttributes from the JSON of an experiment describing atomic positions"""

@@ -60,24 +60,26 @@ def display_help_message():
     """Prints a help message with usage instructions to stderr"""
     handle_command_line_IO.errprint("Usage: python convert_abinit_input_from_atoms_to_direct.py [infile.abinit.json] > [outfile.abinit.json]")
 
-def dope_atoms(atoms_list, doping_atoms_list):
+def dope_atoms(atoms_list, doping_atoms_list, tolerance=0):
     """
     Given a list of atoms within a unit cell (coordinates from 0 to 1),
     MUTATES that list of atoms by doping them according to doping_atoms_list,
     and then returns the modified list
+
+    Can specify tolerance for how close two atoms are to count as the same position.
     """
 
     #copy in each direction, preserving atom order
     for doping_atom in doping_atoms_list:
         successfully_doped_atom = False
         for atom in atoms_list:
-            if atom.coord == doping_atom.coord:
+            if (atom.coord - doping_atom.coord).norm() < tolerance:
                 atom.znucl = doping_atom.znucl
                 successfully_doped_atom = True
                 break #just the inner loop, so we don't have to keep checking atoms
         if not successfully_doped_atom:
             raise RuntimeError( \
-                "Cannot find an atom with the same coordinates as " \
+                "Cannot find an atom within tolerable proximity to " \
                 + str(doping_atom) \
                 + "\nDoping pattern must match the underlying cell")
 
@@ -98,10 +100,9 @@ def main():
 
             # Get the atoms and dopings, remove the dopings
             experiment.meta['atoms'] = \
-                dope_atoms(\
-                    parse_atoms(experiment.meta['atoms']),\
-                    parse_atoms(experiment.meta.pop('dopings', None)) \
-                    )
+                dope_atoms(parse_atoms(experiment.meta['atoms']),
+                           parse_atoms(experiment.meta.pop('dopings', None)),
+                           tolerance=1e-8)
         else:
             handle_command_line_IO.errprint("No doping of unit cell specified; taking no action")
 
