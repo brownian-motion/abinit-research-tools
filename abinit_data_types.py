@@ -31,6 +31,16 @@ class Coordinate:
         """Represents this Coordinate as a JSON object"""
         return json.dumps(self.__dict__, cls=SimpleObjectJSONEncoder)
 
+    def __eq__(self, other):
+        """Returns whether this Coordinate and the other coordinate have the same data"""
+        if self.coordinate_system != other.coordinate_system \
+            or len(self.coordinate_array) != len(other.coordinate_array):
+            return False
+        for i in xrange(0, len(self.coordinate_array)):
+            if self.coordinate_array[i] != other.coordinate_array[i]:
+                return False
+        return True
+
     def __add__(self, other):
         """
         If other is scalar, returns a new Coordinate with each coordinate increased by value other.
@@ -255,7 +265,7 @@ def parse_atom_attribute_from_dict(atom_attribute_dict):
     if isinstance(atom_attribute_dict['coord'], dict):
         fractional_coordinate = Coordinate(\
             coordinate_array=atom_attribute_dict['coord']['coordinate_array'], \
-            coordinate_system=atom_attribute_dict['coord']['coordinate_system'])
+            coordinate_system=atom_attribute_dict['coord'].get('coordinate_system', "reduced"))
     else:
         fractional_coordinate_data = []
         for coordinate_index in atom_attribute_dict['coord']:
