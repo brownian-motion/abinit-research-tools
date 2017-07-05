@@ -24,7 +24,7 @@ class Coordinate:
     Implements scalar addition, subtraction, multiplication, and division.
     """
     def __init__(self, coordinate_array, coordinate_system="unknown"):
-        self.coordinate_array = coordinate_array
+        self.coordinate_array = Coordinate.parse_coordinate_value_array(coordinate_array)
         self.coordinate_system = coordinate_system
 
     def __repr__(self):
@@ -96,6 +96,38 @@ class Coordinate:
             return Coordinate([self.coordinate_array[i]/other[i] for i in xrange(len(self.coordinate_array))])
         else:
             return Coordinate([x/other for x in self.coordinate_array], self.coordinate_system)
+
+    @staticmethod
+    def parse_coordinate_value_array(raw_coordinate_array):
+        """
+        Parses numerical data from a raw_coordinate_array,
+        and returns a new array representing that data in native python types.
+
+        Currently-supported types are int, float, and Fraction
+        """
+        numerical_coordinate_data = []
+        for coordinate_index in raw_coordinate_array:
+            if isinstance(coordinate_index, dict):
+                # Might be an unsupported data type; just let the error pass up if so
+                coordinate_index_value = parse_fraction_from_dict(coordinate_index)
+            elif isinstance(coordinate_index, (str, unicode)):
+                if '/' in coordinate_index: # is a fraction
+                    coordinate_index_value = Fraction(coordinate_index)
+                elif '.' in coordinate_index_value: # is a float
+                    coordinate_index_value = float(coordinate_index_value)
+                elif coordinate_index.isnumeric(): # is an int
+                    # interpret all ints as fractions so that we can do division if need be
+                    coordinate_index_value = Fraction(coordinate_index_value)
+                else:
+                    raise RuntimeError('Unexpected string '+coordinate_index+\
+                    'encountered while parsing atom coordinates: '+raw_coordinate_array)
+            elif isinstance(coordinate_index, (int, float, Fraction)):
+                coordinate_index_value = coordinate_index
+            else:
+                raise RuntimeError('Unexpected data type '+type(coordinate_index)+\
+                    'encountered while parsing atom coordinates: '+raw_coordinate_array)
+            numerical_coordinate_data.append(coordinate_index_value)
+        return numerical_coordinate_data
 
 class SimpleObjectJSONEncoder(JSONEncoder):
     """Encodes objects into JSON using their __dict__ form"""
@@ -267,26 +299,8 @@ def parse_atom_attribute_from_dict(atom_attribute_dict):
             coordinate_array=atom_attribute_dict['coord']['coordinate_array'], \
             coordinate_system=atom_attribute_dict['coord'].get('coordinate_system', "reduced"))
     else:
-        fractional_coordinate_data = []
-        for coordinate_index in atom_attribute_dict['coord']:
-            if isinstance(coordinate_index, dict):
-                coordinate_index_value = parse_fraction_from_dict(coordinate_index)
-            elif isinstance(coordinate_index, (str, unicode)):
-                if '/' in coordinate_index:
-                    coordinate_index_value = Fraction(coordinate_index)
-                elif '.' in coordinate_index_value:
-                    coordinate_index_value = float(coordinate_index_value)
-                else:
-                    # interpret all ints as fractions so that we can do division if need be
-                    coordinate_index_value = Fraction(coordinate_index_value)
-            elif isinstance(coordinate_index, (int, float, Fraction)):
-                coordinate_index_value = coordinate_index
-            else:
-                raise RuntimeError('Unencountered data type '+type(coordinate_index)+\
-                    'encountered while parsing atom coordinates: '+atom_attribute_dict['coord'])
-            fractional_coordinate_data.append(coordinate_index_value)
         fractional_coordinate = \
-            Coordinate(coordinate_array=fractional_coordinate_data, coordinate_system="reduced")
+            Coordinate(coordinate_array=atom_attribute_dict['coord'],coordinate_system="reduced")
     return Atom( \
         int(atom_attribute_dict['znucl']), fractional_coordinate)
 
