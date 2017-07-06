@@ -43,6 +43,16 @@ import matplotlib.pyplot as plt
 import handle_command_line_IO
 from abinit_data_types import parse_atoms, Experiment
 
+def display_atoms_square(atoms, outline=([0, 1, 1, 0, 0], [0, 0, 1, 1, 0])):
+    """Displays atom coordinates within a square unit cell"""
+    xyz_unit = [atom.coord.coordinate_array for atom in atoms]
+    (x_square, y_square) = ([pt[0] for pt in xyz_unit],
+                            [pt[1] for pt in xyz_unit])
+    plt.axis('equal')
+    plt.plot(x_square, y_square, 'ro',
+             outline[0], outline[1], 'b--')
+    plt.show()
+
 def main():
     """
     Displays the atoms from the meta attributes of the input experiment within a square unit cell
@@ -50,12 +60,7 @@ def main():
     with handle_command_line_IO.get_input_file(display_help_function) as input_file:
         experiment = Experiment.load_from_json_file(input_file)
         atoms = parse_atoms(experiment.meta['atoms'])
-        xyz_unit = [atom.coord.coordinate_array for atom in atoms]
-        (x_square, y_square) = ([pt[0] for pt in xyz_unit],
-                                  [pt[1] for pt in xyz_unit])
-        plt.plot(x_square, y_square, 'ro',
-                 [0, 1, 1, 0, 0], [0, 0, 1, 1, 0], 'b--')
-        plt.show()
+        display_atoms_square(atoms)
 
 def display_help_function():
     """

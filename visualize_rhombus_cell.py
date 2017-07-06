@@ -41,7 +41,26 @@ __status__ = "development"
 
 import matplotlib.pyplot as plt
 import handle_command_line_IO
-from abinit_data_types import parse_atoms, Experiment
+from abinit_data_types import parse_atoms, Experiment, Coordinate
+
+def display_atoms_rhombus(atoms):
+    """
+    Displays the atoms's coordinates in a rhombus unit cell
+    """
+    xyz_unit = [atom.coord for atom in atoms]
+    xyz_rhombus = [shear_to_rhombal_grid(coord).coordinate_array for coord in xyz_unit]
+    (x_rhombus, y_rhombus) = ([coord[0] for coord in xyz_rhombus], \
+                              [coord[1] for coord in xyz_rhombus])
+    plt.axis('equal')
+    plt.plot(x_rhombus, y_rhombus, 'ro',
+             [0, 1, 1.5, 0.5, 0], [0, 0, (3**0.5)/2, (3**0.5)/2, 0], 'b--')
+    plt.show()
+
+def shear_to_rhombal_grid(coordinate):
+    """Maps a Coordinate from the unit grid to a 60° unit-length rhombus"""
+    point = coordinate.coordinate_array
+    return Coordinate(coordinate_array=[point[0]+0.5*point[1], point[1]*(3**0.5)/2, point[2]], \
+                      coordinate_system=coordinate.coordinate_system)
 
 def main():
     """
@@ -50,12 +69,7 @@ def main():
     with handle_command_line_IO.get_input_file(display_help_function) as input_file:
         experiment = Experiment.load_from_json_file(input_file)
         atoms = parse_atoms(experiment.meta['atoms'])
-        xyz_unit = [atom.coord.coordinate_array for atom in atoms]
-        (x_rhombus, y_rhombus) = ([pt[0]+0.5*pt[1] for pt in xyz_unit],
-                                  [pt[1]*(3**0.5)/2 for pt in xyz_unit])
-        plt.plot(x_rhombus, y_rhombus, 'ro',
-                 [0, 1, 1.5, 0.5, 0], [0, 0, (3**0.5)/2, (3**0.5)/2, 0], 'b--')
-        plt.show()
+        display_atoms_rhombus(atoms)
 
 def display_help_function():
     """

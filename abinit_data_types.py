@@ -157,12 +157,15 @@ class Coordinate:
                     coordinate_index_value = Fraction(coordinate_index_value)
                 else:
                     raise RuntimeError('Unexpected string '+coordinate_index+\
-                    'encountered while parsing atom coordinates: '+raw_coordinate_array)
+                    'encountered while parsing atom coordinates: '+str(raw_coordinate_array))
             elif isinstance(coordinate_index, (int, float, Fraction)):
                 coordinate_index_value = coordinate_index
             else:
-                raise RuntimeError('Unexpected data type '+type(coordinate_index)+\
-                    'encountered while parsing atom coordinates: '+raw_coordinate_array)
+                try:
+                    coordinate_index_value = float(coordinate_index)
+                except Exception:
+                    raise RuntimeError('Unexpected data type '+str(type(coordinate_index))+\
+                        'encountered while parsing atom coordinates: '+str(raw_coordinate_array))
             numerical_coordinate_data.append(coordinate_index_value)
         return numerical_coordinate_data
 
@@ -318,7 +321,10 @@ class Atom:
         self.znucl = znucl
         # if not (isinstance(coord, Coordinate) and coord.coordinate_system == "reduced"):
         #     raise RuntimeError("Coordinate "+coord+" must be a Coordinate in the reduced system")
-        self.coord = coord #assumed to be a Coordinate object in the "reduced" system with fractional values
+        if isinstance(coord, Coordinate):
+            self.coord = coord #assumed to be a Coordinate object in the "reduced" system
+        else:
+            self.coord = Coordinate(coord, "reduced")
 
     def __repr__(self):
         """Return a string representing this atom in JSON"""

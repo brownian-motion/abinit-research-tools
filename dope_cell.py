@@ -102,7 +102,7 @@ def main():
             experiment.meta['atoms'] = \
                 dope_atoms(parse_atoms(experiment.meta['atoms']),
                            parse_atoms(experiment.meta.pop('dopings', None)),
-                           tolerance=1e-8)
+                           tolerance=1e-4)
         else:
             handle_command_line_IO.errprint("No doping of unit cell specified; taking no action")
 
