@@ -64,50 +64,6 @@ def display_help_message():
 
 
 
-def generate_awful_xy_chiral_cell(unit_cell_atoms_list, desired_chirality):
-    """
-    Given a list of atoms within a unit cell (coordinates from 0 to 1),
-    MUTATES that list of atoms by
-    also within the unit cell (Coordinates are scaled down),
-    and then returns the modified list.
-
-    This is performed by repeating the existing the original unit cell
-    until its larger than the size of the desired unit cell,
-    rotating the coordinates of all atoms,
-    using modulus to redistribute all atoms onto the new unit cell (without duplicating),
-    and returning the resulting array.
-
-    For determing duplicity of atoms,
-    assumes that an atom can be considered unique according to its __repr__().
-
-    This algorithm only supports chiralities of dimension 2.
-
-    It is terribly memory inefficient, but that's not a big concern.
-    """
-    assert len(desired_chirality) == 2 or desired_chirality[2] == 0
-
-    sum_of_chirality = sum(desired_chirality)
-
-    unit_cell_atoms_list = \
-        repeat_atoms_in_unit_cell(unit_cell_atoms_list, [sum_of_chirality, sum_of_chirality, 1])
-
-    xy_angle_to_rotate = -atan2(desired_chirality[0], desired_chirality[1])
-
-    unit_cell_atoms_list = \
-    [Atom(atom.znucl, rotate_coordinate_around_z_axis(atom.coord, xy_angle_to_rotate)) \
-        for atom in unit_cell_atoms_list]
-
-    ## Accounts for shrinking of unit cell by repeat_atoms_in_unit_cell
-    normalization_factor = sum_of_chirality/(desired_chirality[0] ** 2 + desired_chirality[1] ** 2) ** 0.5
-
-    normalization_vector = [normalization_factor, normalization_factor, 1]
-
-    unit_cell_atoms_list =\
-        [Atom(atom.znucl, modulo_to_unit_cell(atom.coord*normalization_vector))\
-            for atom in unit_cell_atoms_list]
-
-    return  list(set(unit_cell_atoms_list))
-
 def generate_xy_chiral_cell(unit_cell_atoms_list, desired_chirality):
     """
     Given a list of atoms within a unit cell (coordinates from 0 to 1),
