@@ -50,10 +50,11 @@ __maintainer__ = "JJ Brown"
 __status__ = "development"
 
 import json
-from math import sin, cos, atan2, acos, sqrt, ceil
 import numpy
 import handle_command_line_IO
-from abinit_data_types import parse_atoms, SimpleObjectJSONEncoder, Experiment, Atom, Coordinate
+from abinit_data_types import parse_atoms, SimpleObjectJSONEncoder, Experiment
+from manipulate_cell import angle_between, length_of, repeat_atom_grid_xy, rotate_atom_grid_xy, \
+                            dilate_atom_grid_xy, is_inside_unit_cell, get_collisions
 
 GENERATED_VALUE_COMMENT = "This field was automatically generated"
 
@@ -100,7 +101,7 @@ def generate_xy_chiral_cell(unit_cell_atoms_list, desired_chirality,\
 
     xy_angle_to_rotate = -angle_between(real_chirality_vector, unit_cell_basis[:, 0])
 
-    number_of_repetitions = int(length_of(real_chirality_vector)) + 2
+    number_of_repetitions = int(length_of(real_chirality_vector)) * 2 + 2
 
     #We can do this in any basis, so might as well use unit cell
     repeated_atoms = repeat_atom_grid_xy(unit_cell_atoms_list, number_of_repetitions)
@@ -114,70 +115,6 @@ def generate_xy_chiral_cell(unit_cell_atoms_list, desired_chirality,\
     normalized_atoms = dilate_atom_grid_xy(rotated_atoms, normalization_factor)
 
     return [atom for atom in normalized_atoms if is_inside_unit_cell(atom.coord)]
-
-def rotate_atom_grid_xy(atoms, angle, real_unit_cell_basis=[[1, 0, 0], [0, 1, 0], [0, 0, 1]]):
-    """maps to real space, rotates, and maps back"""
-    unit_cell_basis = numpy.matrix(real_unit_cell_basis)
-    transformation_matrix = \
-        numpy.linalg.inv(unit_cell_basis) * xy_rotation_matrix(angle) * unit_cell_basis
-    return [Atom(atom.znucl,
-                 Coordinate(transformation_matrix * col_matrix(atom.coord.coordinate_array),
-                            atom.coord.coordinate_system)) \
-            for atom in atoms]
-
-def repeat_atom_grid_xy(atoms, num_times):
-    return [Atom(atom.znucl, atom.coord + [a1, a2, 0])
-            for a1 in xrange(-num_times, num_times)
-            for a2 in xrange(-num_times, num_times)
-            for atom in atoms]
-
-def dilate_atom_grid_xy(atoms, dilation):
-    return [Atom(atom.znucl, atom.coord*[dilation, dilation, 1]) for atom in atoms]
-
-def xy_rotation_matrix(angle):
-    """returns a numpy matrix for the desired rotation around the z axis"""
-    return numpy.matrix([[cos(angle), -sin(angle), 0],
-                         [sin(angle), cos(angle), 0],
-                         [0, 0, 1]])
-
-def dotproduct(v1, v2):
-    return sum((a*b) for a, b in zip(v1, v2))
-
-def length_of(v):
-    return sqrt(dotproduct(v, v))
-
-def angle_between(v1, v2):
-    """from https://stackoverflow.com/questions/2827393/angles-between-two-n-dimensional-vectors-in-python"""
-    return acos(dotproduct(v1, v2) / (length_of(v1) * length_of(v2)))
-
-def col_matrix(arr):
-    out = numpy.array(arr)
-    out.shape = (len(arr), 1)
-    return out
-
-def is_inside_unit_cell(coordinate):
-    """Returns True if the coordinate is in the unit cell between 0 and 1, excluding 1"""
-    return coordinate.coordinate_array[0] >= 0 \
-           and coordinate.coordinate_array[0] < 1 \
-           and coordinate.coordinate_array[1] >= 0 \
-           and coordinate.coordinate_array[1] < 1 \
-           and coordinate.coordinate_array[2] >= 0 \
-           and coordinate.coordinate_array[2] < 1
-
-def modulo_to_unit_cell(coordinate):
-    """Returns a new Coordinate with values modulo-d onto the unit cell (coord%1)"""
-    return Coordinate(\
-        coordinate_array=[(val % 1) for val in coordinate.coordinate_array],
-        coordinate_system=coordinate.coordinate_system)
-
-def rotate_coordinate_around_z_axis(coordinate, angle):
-    """Returns a new Coordinate rotated in the x-y plane by the given angle"""
-    return Coordinate(
-        coordinate_array=[
-            coordinate.coordinate_array[0] * cos(angle) - coordinate.coordinate_array[1] * sin(angle),
-            coordinate.coordinate_array[0] * sin(angle) + coordinate.coordinate_array[1] * cos(angle),
-            coordinate.coordinate_array[2]],
-        coordinate_system=coordinate.coordinate_system)
 
 def main():
     """
@@ -199,6 +136,8 @@ def main():
 
             rhombus_basis = [[1, 0.5, 0], [0, 3**0.5/2, 0], [0, 0, 1]]
 
+            original_number_of_atoms = len(experiment.meta['atoms'])
+
             # Repeat the atoms
             experiment.meta['atoms'] = \
                 generate_xy_chiral_cell(parse_atoms(experiment.meta['atoms']), desired_chirality, rhombus_basis)
@@ -211,6 +150,19 @@ def main():
                         [attribute.value[0] * normalization_factor, \
                          attribute.value[1] * normalization_factor, \
                          attribute.value[2]]
+
+            # Validate  (because chirality is easy to screw up)
+            # Make sure there are no collisions
+            for collision in get_collisions(experiment.meta['atoms']):
+                handle_command_line_IO.errprint(\
+                    "collision between "+str(collision[0])+" and "+str(collision[1]))
+            # Make sure there are the right number of atoms
+            expected_number_of_atoms = original_number_of_atoms * sum([x*x for x in desired_chirality])
+            if expected_number_of_atoms != len(experiment.meta['atoms']):
+                handle_command_line_IO.errprint('WARNING\nExpected '+str(expected_number_of_atoms)+\
+                                   ' atoms, found '+str(len(experiment.meta['atoms'])))
+
+
         else:
             handle_command_line_IO.errprint("No chirality of unit cell specified; taking no action")
 
